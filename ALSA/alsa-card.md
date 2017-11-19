@@ -42,7 +42,8 @@
     -r--r--r--. 1 root root 0 Nov 18 22:41 version
 
 ### struct snd_card
-    snd_card 是整个ALSA音频驱动最顶层的一个结构，整个声卡的软件逻辑结构开始于该结构，几乎所有与声音相关的逻辑设备都是在snd_card的管理之下，声卡驱动的第一个动作通常就是创建一个snd_card结构体。
+    snd_card 是整个ALSA音频驱动最顶层的一个结构，整个声卡的软件逻辑结构开始于该结构，
+    几乎所有与声音相关的逻辑设备都是在snd_card的管理之下，声卡驱动的第一个动作通常就是创建一个snd_card结构体。
 
     struct snd_card {
         int number;                 /* number of soundcard (index to snd_cards) */
