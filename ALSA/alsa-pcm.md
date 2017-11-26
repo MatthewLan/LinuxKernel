@@ -303,3 +303,6 @@
         for (substream = stream->substream; substream != NULL; substream = substream->next)
             substream->ops = ops;
     }
+
+### snd_pcm_dev_register()
+    在 alsa-register.md 中
