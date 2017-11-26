@@ -1,0 +1,343 @@
+
+# ASoC (ALSA System on Chip)
+    linux-4.14
+    - include/sound/soc.h
+    - include/sound/soc-dai.h
+    - sound/soc/
+
+
+### struct snd_soc_codec
+    /* SoC Audio Codec device */
+    struct snd_soc_codec {
+        struct device *dev;
+        const struct snd_soc_codec_driver *driver;
+
+        struct list_head list;
+
+        /* runtime */
+        unsigned int cache_init:1; /* codec cache has been initialized */
+
+        /* codec IO */
+        void *control_data; /* codec control (i2c/3wire) data */
+        hw_write_t hw_write;
+        void *reg_cache;
+
+        /* component */
+        struct snd_soc_component component;
+    };
+
+### struct snd_soc_codec_driver
+    /* codec driver */
+    struct snd_soc_codec_driver {
+        /* driver ops */
+        int (*probe)(struct snd_soc_codec *);
+        int (*remove)(struct snd_soc_codec *);
+        int (*suspend)(struct snd_soc_codec *);
+        int (*resume)(struct snd_soc_codec *);
+        struct snd_soc_component_driver component_driver;
+
+        /* codec wide operations */
+        int (*set_sysclk)(struct snd_soc_codec *codec,
+                  int clk_id, int source, unsigned int freq, int dir);
+        int (*set_pll)(struct snd_soc_codec *codec, int pll_id, int source,
+            unsigned int freq_in, unsigned int freq_out);
+        int (*set_jack)(struct snd_soc_codec *codec,
+                struct snd_soc_jack *jack,  void *data);
+
+        /* codec IO */
+        struct regmap *(*get_regmap)(struct device *);
+        unsigned int (*read)(struct snd_soc_codec *, unsigned int);
+        int (*write)(struct snd_soc_codec *, unsigned int, unsigned int);
+        unsigned int reg_cache_size;
+        short reg_cache_step;
+        short reg_word_size;
+        const void *reg_cache_default;
+
+        /* codec bias level */
+        int (*set_bias_level)(struct snd_soc_codec *,
+                      enum snd_soc_bias_level level);
+        bool idle_bias_off;
+        bool suspend_bias_off;
+
+        void (*seq_notifier)(struct snd_soc_dapm_context *,
+                     enum snd_soc_dapm_type, int);
+
+        bool ignore_pmdown_time;    /* Doesn't benefit from pmdown delay */
+    };
+
+
+### struct snd_soc_component
+    struct snd_soc_component {
+        const char *name;
+        int id;
+        const char *name_prefix;
+        struct device *dev;
+        struct snd_soc_card *card;
+
+        unsigned int active;
+
+        unsigned int ignore_pmdown_time:1; /* pmdown_time is ignored at stop */
+        unsigned int registered_as_component:1;
+        unsigned int suspended:1; /* is in suspend PM state */
+
+        struct list_head list;
+        struct list_head card_aux_list; /* for auxiliary bound components */
+        struct list_head card_list;
+
+        struct snd_soc_dai_driver *dai_drv;
+        int num_dai;
+
+        const struct snd_soc_component_driver *driver;
+
+        struct list_head dai_list;
+
+        int (*read)(struct snd_soc_component *, unsigned int, unsigned int *);
+        int (*write)(struct snd_soc_component *, unsigned int, unsigned int);
+
+        struct regmap *regmap;
+        int val_bytes;
+
+        struct mutex io_mutex;
+
+        /* attached dynamic objects */
+        struct list_head dobj_list;
+
+    #ifdef CONFIG_DEBUG_FS
+        struct dentry *debugfs_root;
+    #endif
+
+        /*
+        * DO NOT use any of the fields below in drivers, they are temporary and
+        * are going to be removed again soon. If you use them in driver code the
+        * driver will be marked as BROKEN when these fields are removed.
+        */
+
+        /* Don't use these, use snd_soc_component_get_dapm() */
+        struct snd_soc_dapm_context dapm;
+
+        struct snd_soc_codec *codec;
+
+        int (*probe)(struct snd_soc_component *);
+        void (*remove)(struct snd_soc_component *);
+        int (*suspend)(struct snd_soc_component *);
+        int (*resume)(struct snd_soc_component *);
+
+        int (*set_sysclk)(struct snd_soc_component *component,
+                  int clk_id, int source, unsigned int freq, int dir);
+        int (*set_pll)(struct snd_soc_component *component, int pll_id,
+                   int source, unsigned int freq_in, unsigned int freq_out);
+        int (*set_jack)(struct snd_soc_component *component,
+                struct snd_soc_jack *jack,  void *data);
+
+        /* machine specific init */
+        int (*init)(struct snd_soc_component *component);
+
+    #ifdef CONFIG_DEBUG_FS
+        void (*init_debugfs)(struct snd_soc_component *component);
+        const char *debugfs_prefix;
+    #endif
+    };
+
+### struct snd_soc_component_driver
+    /* component interface */
+    struct snd_soc_component_driver {
+        const char *name;
+
+        /* Default control and setup, added after probe() is run */
+        const struct snd_kcontrol_new *controls;
+        unsigned int num_controls;
+        const struct snd_soc_dapm_widget *dapm_widgets;
+        unsigned int num_dapm_widgets;
+        const struct snd_soc_dapm_route *dapm_routes;
+        unsigned int num_dapm_routes;
+
+        int (*probe)(struct snd_soc_component *);
+        void (*remove)(struct snd_soc_component *);
+        int (*suspend)(struct snd_soc_component *);
+        int (*resume)(struct snd_soc_component *);
+
+        /* component wide operations */
+        int (*set_sysclk)(struct snd_soc_component *component,
+                  int clk_id, int source, unsigned int freq, int dir);
+        int (*set_pll)(struct snd_soc_component *component, int pll_id,
+                   int source, unsigned int freq_in, unsigned int freq_out);
+        int (*set_jack)(struct snd_soc_component *component,
+                struct snd_soc_jack *jack,  void *data);
+
+        /* DT */
+        int (*of_xlate_dai_name)(struct snd_soc_component *component,
+                     struct of_phandle_args *args,
+                     const char **dai_name);
+        int (*of_xlate_dai_id)(struct snd_soc_component *comment,
+                       struct device_node *endpoint);
+        void (*seq_notifier)(struct snd_soc_component *, enum snd_soc_dapm_type,
+            int subseq);
+        int (*stream_event)(struct snd_soc_component *, int event);
+
+        /* probe ordering - for components with runtime dependencies */
+        int probe_order;
+        int remove_order;
+    };
+
+
+### struct snd_soc_dai_driver
+    /*
+     * Digital Audio Interface Driver.
+     *
+     * Describes the Digital Audio Interface in terms of its ALSA, DAI and AC97
+     * operations and capabilities. Codec and platform drivers will register this
+     * structure for every DAI they have.
+     *
+     * This structure covers the clocking, formating and ALSA operations for each
+     * interface.
+     */
+    struct snd_soc_dai_driver {
+        /* DAI description */
+        const char *name;
+        unsigned int id;
+        unsigned int base;
+        struct snd_soc_dobj dobj;
+
+        /* DAI driver callbacks */
+        int (*probe)(struct snd_soc_dai *dai);
+        int (*remove)(struct snd_soc_dai *dai);
+        int (*suspend)(struct snd_soc_dai *dai);
+        int (*resume)(struct snd_soc_dai *dai);
+        /* compress dai */
+        int (*compress_new)(struct snd_soc_pcm_runtime *rtd, int num);
+        /* Optional Callback used at pcm creation*/
+        int (*pcm_new)(struct snd_soc_pcm_runtime *rtd,
+                   struct snd_soc_dai *dai);
+        /* DAI is also used for the control bus */
+        bool bus_control;
+
+        /* ops */
+        const struct snd_soc_dai_ops *ops;
+        const struct snd_soc_cdai_ops *cops;
+
+        /* DAI capabilities */
+        struct snd_soc_pcm_stream capture;
+        struct snd_soc_pcm_stream playback;
+        unsigned int symmetric_rates:1;
+        unsigned int symmetric_channels:1;
+        unsigned int symmetric_samplebits:1;
+
+        /* probe ordering - for components with runtime dependencies */
+        int probe_order;
+        int remove_order;
+    };
+
+### struct snd_soc_dai
+    /*
+     * Digital Audio Interface runtime data.
+     *
+     * Holds runtime data for a DAI.
+     */
+    struct snd_soc_dai {
+        const char *name;
+        int id;
+        struct device *dev;
+
+        /* driver ops */
+        struct snd_soc_dai_driver *driver;
+
+        /* DAI runtime info */
+        unsigned int capture_active:1;      /* stream is in use */
+        unsigned int playback_active:1;     /* stream is in use */
+        unsigned int symmetric_rates:1;
+        unsigned int symmetric_channels:1;
+        unsigned int symmetric_samplebits:1;
+        unsigned int probed:1;
+
+        unsigned int active;
+
+        struct snd_soc_dapm_widget *playback_widget;
+        struct snd_soc_dapm_widget *capture_widget;
+
+        /* DAI DMA data */
+        void *playback_dma_data;
+        void *capture_dma_data;
+
+        /* Symmetry data - only valid if symmetry is being enforced */
+        unsigned int rate;
+        unsigned int channels;
+        unsigned int sample_bits;
+
+        /* parent platform/codec */
+        struct snd_soc_codec *codec;
+        struct snd_soc_component *component;
+
+        /* CODEC TDM slot masks and params (for fixup) */
+        unsigned int tx_mask;
+        unsigned int rx_mask;
+
+        struct list_head list;
+    };
+
+### struct snd_soc_dai_ops
+    struct snd_soc_dai_ops {
+        /*
+         * DAI clocking configuration, all optional.
+         * Called by soc_card drivers, normally in their hw_params.
+         */
+        int (*set_sysclk)(struct snd_soc_dai *dai,
+            int clk_id, unsigned int freq, int dir);
+        int (*set_pll)(struct snd_soc_dai *dai, int pll_id, int source,
+            unsigned int freq_in, unsigned int freq_out);
+        int (*set_clkdiv)(struct snd_soc_dai *dai, int div_id, int div);
+        int (*set_bclk_ratio)(struct snd_soc_dai *dai, unsigned int ratio);
+
+        /*
+         * DAI format configuration
+         * Called by soc_card drivers, normally in their hw_params.
+         */
+        int (*set_fmt)(struct snd_soc_dai *dai, unsigned int fmt);
+        int (*xlate_tdm_slot_mask)(unsigned int slots,
+            unsigned int *tx_mask, unsigned int *rx_mask);
+        int (*set_tdm_slot)(struct snd_soc_dai *dai,
+            unsigned int tx_mask, unsigned int rx_mask,
+            int slots, int slot_width);
+        int (*set_channel_map)(struct snd_soc_dai *dai,
+            unsigned int tx_num, unsigned int *tx_slot,
+            unsigned int rx_num, unsigned int *rx_slot);
+        int (*set_tristate)(struct snd_soc_dai *dai, int tristate);
+
+        /*
+         * DAI digital mute - optional.
+         * Called by soc-core to minimise any pops.
+         */
+        int (*digital_mute)(struct snd_soc_dai *dai, int mute);
+        int (*mute_stream)(struct snd_soc_dai *dai, int mute, int stream);
+
+        /*
+         * ALSA PCM audio operations - all optional.
+         * Called by soc-core during audio PCM operations.
+         */
+        int (*startup)(struct snd_pcm_substream *,
+            struct snd_soc_dai *);
+        void (*shutdown)(struct snd_pcm_substream *,
+            struct snd_soc_dai *);
+        int (*hw_params)(struct snd_pcm_substream *,
+            struct snd_pcm_hw_params *, struct snd_soc_dai *);
+        int (*hw_free)(struct snd_pcm_substream *,
+            struct snd_soc_dai *);
+        int (*prepare)(struct snd_pcm_substream *,
+            struct snd_soc_dai *);
+        /*
+         * NOTE: Commands passed to the trigger function are not necessarily
+         * compatible with the current state of the dai. For example this
+         * sequence of commands is possible: START STOP STOP.
+         * So do not unconditionally use refcounting functions in the trigger
+         * function, e.g. clk_enable/disable.
+         */
+        int (*trigger)(struct snd_pcm_substream *, int,
+            struct snd_soc_dai *);
+        int (*bespoke_trigger)(struct snd_pcm_substream *, int,
+            struct snd_soc_dai *);
+        /*
+         * For hardware based FIFO caused delay reporting.
+         * Optional.
+         */
+        snd_pcm_sframes_t (*delay)(struct snd_pcm_substream *,
+            struct snd_soc_dai *);
+    };
