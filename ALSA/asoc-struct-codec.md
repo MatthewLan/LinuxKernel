@@ -280,9 +280,12 @@
          * DAI clocking configuration, all optional.
          * Called by soc_card drivers, normally in their hw_params.
          */
+        /* 设置dai的主时钟 */
         int (*set_sysclk)(struct snd_soc_dai *dai, int clk_id, unsigned int freq, int dir);
+        /* 设置PLL参数 */
         int (*set_pll)(struct snd_soc_dai *dai, int pll_id, int source,
             unsigned int freq_in, unsigned int freq_out);
+        /* 设置分频系数 */
         int (*set_clkdiv)(struct snd_soc_dai *dai, int div_id, int div);
         int (*set_bclk_ratio)(struct snd_soc_dai *dai, unsigned int ratio);
 
@@ -290,15 +293,19 @@
          * DAI format configuration
          * Called by soc_card drivers, normally in their hw_params.
          */
+        /* 设置分频系数 */
         int (*set_fmt)(struct snd_soc_dai *dai, unsigned int fmt);
         int (*xlate_tdm_slot_mask)(unsigned int slots,
             unsigned int *tx_mask, unsigned int *rx_mask);
+        /* 如果dai支持时分复用，用于设置时分复用的slot */
         int (*set_tdm_slot)(struct snd_soc_dai *dai,
             unsigned int tx_mask, unsigned int rx_mask,
             int slots, int slot_width);
+        /* 声道的时分复用映射设置 */
         int (*set_channel_map)(struct snd_soc_dai *dai,
             unsigned int tx_num, unsigned int *tx_slot,
             unsigned int rx_num, unsigned int *rx_slot);
+        /* 设置dai引脚的状态，当与其他dai并联使用同一引脚时需要使用该回调 */
         int (*set_tristate)(struct snd_soc_dai *dai, int tristate);
 
         /*
@@ -333,3 +340,61 @@
          */
         snd_pcm_sframes_t (*delay)(struct snd_pcm_substream *, struct snd_soc_dai *);
     };
+
+
+    /* Digital Audio Interface clocking API.*/
+    int snd_soc_dai_set_sysclk(struct snd_soc_dai *dai, int clk_id,
+        unsigned int freq, int dir);
+
+    int snd_soc_dai_set_clkdiv(struct snd_soc_dai *dai,
+        int div_id, int div);
+
+    int snd_soc_dai_set_pll(struct snd_soc_dai *dai,
+        int pll_id, int source, unsigned int freq_in, unsigned int freq_out);
+
+    int snd_soc_dai_set_bclk_ratio(struct snd_soc_dai *dai, unsigned int ratio);
+
+    /* Digital Audio interface formatting */
+    int snd_soc_dai_set_fmt(struct snd_soc_dai *dai, unsigned int fmt);
+
+    int snd_soc_dai_set_tdm_slot(struct snd_soc_dai *dai,
+        unsigned int tx_mask, unsigned int rx_mask, int slots, int slot_width);
+
+    int snd_soc_dai_set_channel_map(struct snd_soc_dai *dai,
+        unsigned int tx_num, unsigned int *tx_slot,
+        unsigned int rx_num, unsigned int *rx_slot);
+
+    int snd_soc_dai_set_tristate(struct snd_soc_dai *dai, int tristate);
+
+    /* Digital Audio Interface mute */
+    int snd_soc_dai_digital_mute(struct snd_soc_dai *dai, int mute,
+                     int direction);
+
+
+### snd_soc_dai_set_fmt()
+    fmt: 目前只是用了它的低16位
+
+    bit 0-3 用于设置接口的格式：
+        #define SND_SOC_DAIFMT_I2S          SND_SOC_DAI_FORMAT_I2S
+        #define SND_SOC_DAIFMT_RIGHT_J      SND_SOC_DAI_FORMAT_RIGHT_J
+        #define SND_SOC_DAIFMT_LEFT_J       SND_SOC_DAI_FORMAT_LEFT_J
+        #define SND_SOC_DAIFMT_DSP_A        SND_SOC_DAI_FORMAT_DSP_A
+        #define SND_SOC_DAIFMT_DSP_B        SND_SOC_DAI_FORMAT_DSP_B
+        #define SND_SOC_DAIFMT_AC97         SND_SOC_DAI_FORMAT_AC97
+        #define SND_SOC_DAIFMT_PDM          SND_SOC_DAI_FORMAT_PDM
+
+    bit 4-7 用于设置接口时钟的开关特性：
+        #define SND_SOC_DAIFMT_MSB          SND_SOC_DAIFMT_LEFT_J
+        #define SND_SOC_DAIFMT_LSB          SND_SOC_DAIFMT_RIGHT_J
+
+    bit 8-11 用于设置接口时钟的相位：
+        #define SND_SOC_DAIFMT_NB_NF        (0 << 8) /* normal bit clock + frame */
+        #define SND_SOC_DAIFMT_NB_IF        (2 << 8) /* normal BCLK + inv FRM */
+        #define SND_SOC_DAIFMT_IB_NF        (3 << 8) /* invert BCLK + nor FRM */
+        #define SND_SOC_DAIFMT_IB_IF        (4 << 8) /* invert BCLK + FRM */
+
+    bit 12-15 用于设置接口主从格式：
+        #define SND_SOC_DAIFMT_CBM_CFM      (1 << 12) /* codec clk & FRM master */
+        #define SND_SOC_DAIFMT_CBS_CFM      (2 << 12) /* codec clk slave & FRM master */
+        #define SND_SOC_DAIFMT_CBM_CFS      (3 << 12) /* codec clk master & frame slave */
+        #define SND_SOC_DAIFMT_CBS_CFS      (4 << 12) /* codec clk & FRM slave */
