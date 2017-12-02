@@ -1,5 +1,5 @@
 
-# smdk_wm8894
+# smdk_wm8994
     linux-4.14
     - sound/soc/samsumg/smdk_wm8994.c
     - sound/soc/soc-devres.c

@@ -1,5 +1,5 @@
 
-# smdk_wm8894
+# wm8994
     linux-4.14
     - sound/soc/codecs/wm8994.c     /* platform driver */
     - sound/soc/soc-core.c
