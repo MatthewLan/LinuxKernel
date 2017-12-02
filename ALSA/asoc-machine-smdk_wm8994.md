@@ -2,6 +2,9 @@
 # smdk_wm8894
     linux-4.14
     - sound/soc/samsumg/smdk_wm8994.c
+    - sound/soc/soc-devres.c
+    - sound/soc/soc-core.c
+    - sound/soc/soc-pcm.c
 
 
 ### module_platform_driver(), xxx_probe()
