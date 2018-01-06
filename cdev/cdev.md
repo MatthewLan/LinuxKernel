@@ -269,24 +269,27 @@
     }
 
     static inline unsigned long
-    _copy_to_user(void __user *to, const void *from, unsigned long n)
+    _copy_from_user(void *to, const void __user *from, unsigned long n)
     {
+        unsigned long res = n;
         might_fault();
-        if (access_ok(VERIFY_WRITE, to, n)) {   /* 检查用户空间的缓冲区的合法性 */
-            kasan_check_read(from, n);
-            n = raw_copy_to_user(to, from, n);
+        if (likely(access_ok(VERIFY_READ, from, n))) {  /* 检查用户空间的缓冲区的合法性 */
+            kasan_check_write(to, n);
+            res = raw_copy_from_user(to, from, n);
         }
-        return n;
+        if (unlikely(res))
+            memset(to + (n - res), 0, res);
+        return res;
     }
 
     *** 注意：在内核空间与用户空间的界面处，内核检查用户空间缓冲区的合法性显得尤其必要；
 
-### copy_from_user()
+### copy_to_user()
     static __always_inline unsigned long __must_check
-    copy_from_user(void *to, const void __user *from, unsigned long n)
+    copy_to_user(void __user *to, const void *from, unsigned long n)
     {
-        if (likely(check_copy_size(to, n, false)))
-            n = _copy_from_user(to, from, n);
+        if (likely(check_copy_size(from, n, true)))
+            n = _copy_to_user(to, from, n);
         return n;
     }
 
