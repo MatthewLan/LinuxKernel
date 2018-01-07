@@ -3,7 +3,8 @@ KVERS = $(shell uname -r)
 
 # Kernel modules
 # 1 - only one file
-obj-m += globalmem.o
+# obj-m += globalmem.o
+obj-m += globalmem_block.o
 
 # 2 - multiple files
 # modulename-objs := globalmem.o
