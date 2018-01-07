@@ -22,6 +22,7 @@
 struct globalmem_dev {
     struct cdev   cdev;
     unsigned char mem[GLOBALMEM_SIZE];
+    struct mutex  mutex;
 };
 
 
@@ -78,6 +79,7 @@ static ssize_t globalmem_read(struct file *filp, char __user *buf, size_t size, 
     int                  ret   = 0;
     struct globalmem_dev *dev  = filp->private_data;
 
+    mutex_lock(&dev->mutex);
     do {
         if (GLOBALMEM_SIZE <= p)
             break;
@@ -92,6 +94,7 @@ static ssize_t globalmem_read(struct file *filp, char __user *buf, size_t size, 
             printk(KERN_INFO "read %u bytes from %lu\n", count, p);
         }
     } while (0);
+    mutex_unlock(&dev->mutex);
     return ret;
 }
 
@@ -102,6 +105,7 @@ static ssize_t globalmem_write(struct file *filp, const char __user *buf, size_t
     int                  ret   = 0;
     struct globalmem_dev *dev  = filp->private_data;
 
+    mutex_lock(&dev->mutex);
     do {
         if (GLOBALMEM_SIZE <= p)
             break;
@@ -116,6 +120,7 @@ static ssize_t globalmem_write(struct file *filp, const char __user *buf, size_t
             printk(KERN_INFO "written %u bytes from %lu\n", count, p);
         }
     } while (0);
+    mutex_unlock(&dev->mutex);
     return ret;
 }
 
@@ -126,7 +131,9 @@ static long globalmem_ioctl(struct file *filp, unsigned int cmd, unsigned long a
 
     switch (cmd) {
     case MEM_CLEAR:
+        mutex_lock(&dev->mutex);
         memset(dev->mem, 0, GLOBALMEM_SIZE);
+        mutex_unlock(&dev->mutex);
         printk(KERN_INFO "globalmem is set to zero\n");
         break;
     default:
@@ -185,6 +192,7 @@ static int __init globalmem_init(void)
         printk(KERN_NOTICE "ERROR %d adding globalmem\n", ret);
         goto error_add;
     }
+    mutex_init(&globalmem_devp->mutex);
     printk(KERN_NOTICE "globalmem_init OK\n");
     return 0;
 
