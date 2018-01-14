@@ -23,12 +23,13 @@
  * Types
  ***********************************************/
 struct globalmem_dev {
-    struct cdev       cdev;
-    unsigned int      cur_len;              /* 0 - FIFO empty; GLOBALMEM_SIZE - FIFO full */
-    unsigned char     mem[GLOBALMEM_SIZE];
-    struct mutex      mutex;
-    wait_queue_head_t wq_head_r;
-    wait_queue_head_t wq_head_w;
+    struct cdev          cdev;
+    unsigned int         cur_len;              /* 0 - FIFO empty; GLOBALMEM_SIZE - FIFO full */
+    unsigned char        mem[GLOBALMEM_SIZE];
+    struct mutex         mutex;
+    wait_queue_head_t    wq_head_r;
+    wait_queue_head_t    wq_head_w;
+    struct fasync_struct *async_queue;
 };
 
 
@@ -156,6 +157,9 @@ static ssize_t globalmem_write(struct file *filp, const char __user *buf, size_t
         dev->cur_len += count;
         printk(KERN_INFO "written %ld bytes from %d\n", count, dev->cur_len);
         wake_up_interruptible(&dev->wq_head_r); /* 唤醒读进程 */
+        if (dev->async_queue) {
+            kill_fasync(&dev->async_queue, SIGIO, POLL_IN); /* 释放信号 */
+        }
         ret = count;
     }
 
@@ -203,6 +207,12 @@ static long globalmem_ioctl(struct file *filp, unsigned int cmd, unsigned long a
     return ret;
 }
 
+static int globalmem_fasync(int fd, struct file *filp, int on)
+{
+    struct globalmem_dev *dev = filp->private_data;
+    return fasync_helper(fd, filp, on, &dev->async_queue);
+}
+
 static int globalmem_open(struct inode *inode, struct file *filp)
 {
     filp->private_data = globalmem_devp;
@@ -211,6 +221,8 @@ static int globalmem_open(struct inode *inode, struct file *filp)
 
 static int globalmem_release(struct inode *inode, struct file *filp)
 {
+    /* 将文件从异步通知列表中删除 */
+    globalmem_fasync(-1, filp, 0);
     return 0;
 }
 
@@ -224,6 +236,7 @@ static const struct file_operations globalmem_fops = {
     .unlocked_ioctl = globalmem_ioctl,
     .open           = globalmem_open,
     .release        = globalmem_release,
+    .fasync         = globalmem_fasync,
 };
 
 static int __init globalmem_init(void)
