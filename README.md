@@ -27,8 +27,11 @@
         seqlock.md
         rcu.md
       7.6 信号量
+        semaphore.md
       7.7 互斥体
+        mutex.md
       7.8 完成量
+        completion.md
     8. Linux设备驱动中的阻塞与非阻塞I/O
     9. Linux设备驱动中的异步通知与异步I/O
     10. 中断与时钟
