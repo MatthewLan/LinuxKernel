@@ -13,16 +13,19 @@
     6. 字符设备驱动
         chrdev/chrdev.md
     7. Linux设备驱动中的并发控制
+        concurrency_control/
       7.1 并发与竞态
       7.2 编译乱序和执行乱序
-        concurrency_control/concurrency_race.md
+        concurrency_race.md
       7.3 中断屏蔽
-        concurrency_control/irq_disable.md
+        irq_disable.md
       7.4 原子操作
-        concurrency_control/atomic.md
+        atomic.md
       7.5 自旋锁
-        concurrency_control/spin_lock.md
-        concurrency_control/rwlock.md
+        spin_lock.md
+        rwlock.md
+        seqlock.md
+        rcu.md
       7.6 信号量
       7.7 互斥体
       7.8 完成量
