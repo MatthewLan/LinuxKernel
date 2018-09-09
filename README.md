@@ -33,6 +33,11 @@
       7.8 完成量
         completion.md
     8. Linux设备驱动中的阻塞与非阻塞I/O
+        block_nonblock/
+      8.1 等待队列
+        wait_queue.md
+      8.2 轮询操作
+        poll.md
     9. Linux设备驱动中的异步通知与异步I/O
     10. 中断与时钟
     11. 内存与I/O访问
